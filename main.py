@@ -16,21 +16,20 @@ BLACK = (0, 0, 0)
 PINK_BG = (255, 224, 235)
 
 # --- ⭐️ 중요: 파일 경로 설정 (웹 호환) ---
-# pygbag 환경에서는 파일 경로를 현재 폴더 기준으로 단순하게 작성합니다.
-# 이 코드를 실행하는 main.py 파일과 같은 위치에 이미지 폴더와 폰트 파일이 있어야 합니다.
-
-# 폰트 파일 경로 (예: 'font.ttf' 파일을 프로젝트 폴더에 추가해야 합니다)
-# 만약 'font'라는 폴더를 만들었다면 'font/font.ttf' 와 같이 경로를 지정합니다.
-font_path = "font.ttf" 
 # 이미지 파일들이 있는 폴더 경로
 assets_path = "images" 
 
 try:
-    # 폰트 로드
-    font = pygame.font.Font(font_path, 40)
+    # --- ⭐️ 폰트 로딩 수정 ---
+    # font.ttf 파일이 있으면 사용하고, 없으면 Pygame의 기본 폰트를 사용합니다.
+    # 이렇게 하면 폰트 파일이 없어도 게임이 멈추지 않습니다.
+    font_path = "font.ttf"
+    if os.path.exists(font_path):
+        font = pygame.font.Font(font_path, 40)
+    else:
+        font = pygame.font.Font(None, 50) # Pygame 기본 폰트 사용
 
     # --- 이미지 로드 및 크기 조절 ---
-    # os.path.join을 사용하여 각 운영체제에 맞는 경로를 만들어줍니다.
     player_img = pygame.image.load(os.path.join(assets_path, "player.jpg"))
     player_img = pygame.transform.scale(player_img, (70, 70))
 
@@ -44,10 +43,11 @@ try:
         image_file = os.path.join(assets_path, f"p{i}.jpg")
         poison_images.append(pygame.transform.scale(pygame.image.load(image_file), (50, 50)))
 
+    running = True # 파일 로딩 성공 시 running = True
+
 except pygame.error as e:
     print(f"파일 로딩 중 오류 발생: {e}")
-    # 웹 환경에서는 quit()을 호출하면 브라우저가 멈출 수 있으므로 루프를 중단합니다.
-    running = False 
+    running = False # 파일 로딩 실패 시 running = False
 
 
 # --- 게임 요소 생성 ---
@@ -65,17 +65,24 @@ game_duration = 60000  # 60초
 clock = pygame.time.Clock()
 FPS = 60
 
-# --- ⭐️ 메인 게임 루프 (asyncio 제거) ---
-running = True
+# --- 메인 게임 루프 ---
 game_over = False
 
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        # 모바일 터치 또는 마우스 클릭으로 이동 (간단하게 구현)
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            touch_pos = pygame.mouse.get_pos()
+            
+        # --- ⭐️ 모바일 터치 이벤트 추가 ---
+        # 마우스 클릭 또는 화면 터치(FINGERDOWN) 시 플레이어 이동
+        if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.FINGERDOWN:
+            # 터치/클릭 위치 가져오기
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                touch_pos = event.pos
+            else: # FINGERDOWN 이벤트의 경우
+                # 화면 좌표로 변환 필요
+                touch_pos = (event.x * screen_width, event.y * screen_height)
+
             if touch_pos[0] > screen_width // 2:
                 player_rect.x += player_speed * 3
             else:
@@ -125,12 +132,8 @@ while running:
     
     # --- 화면 그리기 ---
     screen.fill(PINK_BG)
-
-    # 아이템 그리기
     for item in items:
         screen.blit(item['img'], item['rect'])
-    
-    # 플레이어 그리기
     screen.blit(player_img, player_rect)
     
     # 점수, 생명, 시간 텍스트 그리기
@@ -149,11 +152,5 @@ while running:
         screen.blit(end_text, (screen_width // 2 - end_text.get_width() // 2, screen_height // 2 - 50))
         screen.blit(final_score_text, (screen_width // 2 - final_score_text.get_width() // 2, screen_height // 2))
 
-    # 화면 업데이트
     pygame.display.flip()
-    
-    # FPS 설정
     clock.tick(FPS)
-
-# 웹 환경에서는 아래 두 줄이 필요 없습니다.
-# pygame.quit()

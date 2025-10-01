@@ -1,3 +1,0 @@
-([('my_game',
-   '/Users/iyeowon/Documents/mushroom game/dist/my_game',
-   'EXECUTABLE')],)
